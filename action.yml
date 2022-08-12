@@ -1,4 +1,4 @@
-name: 'Upload a release asset to an existing release'
+name: 'Upload release assets to an existing release'
 description: |
   Allows the user to update an existing release
 author: 'echapmanFromBunnings'
@@ -15,11 +15,13 @@ inputs:
     required: true
     default: ${{ github.token }}
   files:
-    description: 'Files to upload to GitHub'
+    description: 'Files to upload to GitHub, must be a multiline result. Glob supported.'
     required: false
+    default: ''
   artefactName:
     description: 'The artefact to download if this is being done within another workflow'
     required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -40,59 +42,82 @@ runs:
         path: ./_tmpuragha/out
     - name: Upload assets
       uses: actions/github-script@v6
+      env:
+        FILES: ${{ inputs.files }}
+        ARTEFACT_NAME_INPUT: "${{ inputs.artefactName }}"
       with:
         github-token: ${{ inputs.githubToken }}
         debug: true
         script: |
           const path = require('path');
           const fs = require('fs');
+          const os = require('os');
+          
+          const __dirname = path.resolve()
+
           console.log('searching for release...')
           var { data: release } = await github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag: '${{ inputs.releaseTag }}'
-            });
-            
-          console.log("found release " + release.name)
-          
-          var uploadUrl = release.upload_url;
-          
-          if ("${{inputs.artefactName}}" == ""){
-            const globOptions = {
-              followSymbolicLinks: 'FALSE'
-            }
+              tag: '3.1.4'
+          });
 
-            const globber = await glob.create(core.getInput('files'), globOptions)
+          console.log("found release " + release.name)
+
+          if (process.env.ARTEFACT_NAME_INPUT == '' && process.env.FILES.indexOf("*") > -1){
+            console.log('doing globbing option');
+            const globOptions = {
+                followSymbolicLinks: 'FALSE'
+            }
+            const files = process.env.FILES.split(os.EOL);
+            
+            const globber = await glob.create(files, globOptions)
+
             for await (const file of globber.globGenerator()) {
+              console.log(file)
               fs.readFile(file, 'utf8', (err, data) => {
                 if (err) {
-                  console.error(err);
-                  return;
+                    console.error(err);
+                    return;
                 }
                 console.log('write to '+ release.id)
                 github.rest.repos.uploadReleaseAsset({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  release_id: release.id,
-                  name: file,
-                  data: data
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    release_id: release.id,
+                    name: file,
+                    data: data
                 });
               });
             }
-          }else{
-          
-            const directoryPath = path.join(__dirname, '_tmpuragha/out');
-            fs.readdir(directoryPath, function (err, files) {
+          }else if(process.env.ARTEFACT_NAME_INPUT == ''){
+            console.log('doing file option');
+            if (core.isDebug()) {
+              const directoryPath = './';
+              fs.readdir(directoryPath, function (err, files) {
                 if (err) {
                     return console.log('Unable to scan directory: ' + err);
-                } 
+                }
+
                 //listing all files using forEach
                 files.forEach(function (file) {
-                    fs.readFile(file, 'utf8', (err, data) => {
+                  console.log('local fs' + file)
+                });
+              });                  
+            }
+            
+            const files = process.env.FILES.split(os.EOL);
+            console.log(files)
+            files.forEach(file => {
+                if(file){
+                  const fullName = path.resolve(__dirname,file);
+                  console.log('filename found: ' + fullName);
+                  fs.readFile(fullName, 'utf8', (err, data) => {
                       if (err) {
                         console.error(err);
                         return;
                       }
+                      console.log('write to '+ release.id)
                       github.rest.repos.uploadReleaseAsset({
                         owner: context.repo.owner,
                         repo: context.repo.repo,
@@ -100,8 +125,33 @@ runs:
                         name: file,
                         data: data
                       });
-                  });
+                  });              
+                }
+            });            
+          }else{
+            console.log('doing artefact option');
+            const directoryPath = './_tmpuragha/out/';
+            fs.readdir(directoryPath, function (err, files) {
+                if (err) {
+                    return console.log('Unable to scan directory: ' + err);
+                } 
 
+                //listing all files using forEach
+                files.forEach(function (file) {
+                const fullName = path.resolve(__dirname, path.join('_tmpuragha/out/',file));
+                fs.readFile(fullName, 'utf8', (err, data) => {
+                    if (err) {
+                      console.error(err);
+                      return;
+                    }
+                    github.rest.repos.uploadReleaseAsset({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      release_id: release.id,
+                      name: file,
+                      data: data
+                    });
+                });
                 });
             });          
           }
