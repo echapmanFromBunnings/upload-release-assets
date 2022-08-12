@@ -69,6 +69,7 @@ runs:
                   console.error(err);
                   return;
                 }
+                console.log('write to '+ release.id)
                 await github.rest.repos.uploadReleaseAsset({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
