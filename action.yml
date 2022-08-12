@@ -47,7 +47,7 @@ runs:
           const path = require('path');
           const fs = require('fs');
           console.log('searching for release...')
-          var { data: release } = github.rest.repos.getReleaseByTag({
+          var { data: release } = await github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag: '${{ inputs.releaseTag }}'
@@ -63,7 +63,7 @@ runs:
             }
 
             const globber = glob.create(core.getInput('files'), globOptions)
-            for (const file of globber.globGenerator()) {
+            for await (const file of globber.globGenerator()) {
               fs.readFile(file, 'utf8', (err, data) => {
                 if (err) {
                   console.error(err);
@@ -89,17 +89,17 @@ runs:
                 //listing all files using forEach
                 files.forEach(function (file) {
                     fs.readFile(file, 'utf8', (err, data) => {
-                    if (err) {
-                      console.error(err);
-                      return;
-                    }
-                    github.rest.repos.uploadReleaseAsset({
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
-                      release_id: release.id,
-                      name: file,
-                      data: data
-                    });
+                      if (err) {
+                        console.error(err);
+                        return;
+                      }
+                      github.rest.repos.uploadReleaseAsset({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        release_id: release.id,
+                        name: file,
+                        data: data
+                      });
                   });
 
                 });
