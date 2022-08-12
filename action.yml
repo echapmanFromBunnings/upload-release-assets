@@ -47,7 +47,7 @@ runs:
           const path = require('path');
           const fs = require('fs');
           console.log('searching for release...')
-          var { data: release } = await github.rest.repos.getReleaseByTag({
+          var { data: release } = github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag: '${{ inputs.releaseTag }}'
@@ -70,7 +70,7 @@ runs:
                   return;
                 }
                 console.log('write to '+ release.id)
-                await github.rest.repos.uploadReleaseAsset({
+                github.rest.repos.uploadReleaseAsset({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   release_id: release.id,
@@ -93,7 +93,7 @@ runs:
                       console.error(err);
                       return;
                     }
-                    await github.rest.repos.uploadReleaseAsset({
+                    github.rest.repos.uploadReleaseAsset({
                       owner: context.repo.owner,
                       repo: context.repo.repo,
                       release_id: release.id,
