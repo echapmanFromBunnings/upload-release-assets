@@ -9,11 +9,11 @@ inputs:
   releaseTag:
     description: 'Release tag to be updated'
     required: false
-    default: ${{ github.event.release.name }}
+    default: '${{ github.event.release.name }}'
   githubToken:
     description: 'Token for the repository. Can be passed in using {{ secrets.GITHUB_TOKEN }}'
-    required: false
-    default: ${{ secrets.GITHUB_TOKEN }}
+    required: true
+    default: ${{ github.token }}
   files:
     description: 'Files to upload to GitHub'
     required: false
@@ -33,7 +33,7 @@ runs:
         fi
       shell: bash
     - name: Download artefact
-      if: ${{ inputs.artefactName != "" }} 
+      if: ${{ inputs.artefactName != null }}
       uses: actions/download-artifact@v3
       with:
         name: ${{ inputs.artefactName }}
