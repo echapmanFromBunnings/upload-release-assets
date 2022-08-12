@@ -46,11 +46,11 @@ runs:
         script: |
           const path = require('path');
           const fs = require('fs');
-          
+          console.log('searching for release...')
           var { data: release } = await github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag: ${{ inputs.releaseTag }}
+              tag: '${{ inputs.releaseTag }}'
             });
             
           console.log("found release " + release.name)
