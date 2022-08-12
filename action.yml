@@ -62,8 +62,8 @@ runs:
               followSymbolicLinks: 'FALSE'
             }
 
-            const globber = glob.create(core.getInput('files'), globOptions)
-            for (const file of globber.globGenerator()) {
+            const globber = await glob.create(core.getInput('files'), globOptions)
+            for await (const file of globber.globGenerator()) {
               fs.readFile(file, 'utf8', (err, data) => {
                 if (err) {
                   console.error(err);
