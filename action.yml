@@ -1,0 +1,106 @@
+name: 'Upload a release asset to an existing release'
+description: |
+  Allows the user to update an existing release
+author: 'echapmanFromBunnings'
+branding:
+  icon: 'archive'
+  color: 'green'
+inputs:
+  releaseTag:
+    description: 'Release tag to be updated'
+    required: false
+    default: ${{ github.event.release.name }}
+  githubToken:
+    description: 'Token for the repository. Can be passed in using {{ secrets.GITHUB_TOKEN }}'
+    required: false
+    default: ${{ secrets.GITHUB_TOKEN }}
+  files:
+    description: 'Files to upload to GitHub'
+    required: false
+  artefactName:
+    description: 'The artefact to download if this is being done within another workflow'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: validate inputs
+      run: |
+        if [ -z "${{inputs.artefactName}}" ] && [ -z "${{inputs.files}}" ]
+        then
+            echo "No artefact or file name passed in"
+            exit 1
+        fi
+      shell: bash
+    - name: Download artefact
+      if: ${{ inputs.artefactName != "" }} 
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{ inputs.artefactName }}
+        path: ./_tmpuragha/out
+    - name: Upload assets
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ inputs.githubToken }}
+        debug: true
+        script: |
+          const path = require('path');
+          const fs = require('fs');
+          
+          var { data: release } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: ${{ inputs.releaseTag }}
+            });
+            
+          console.log("found release " + release.name)
+          
+          var uploadUrl = release.upload_url;
+          
+          if ("${{inputs.artefactName}}" == ""){
+            const globOptions = {
+              followSymbolicLinks: 'FALSE'
+            }
+
+            const globber = glob.create(core.getInput('files'), globOptions)
+            for await (const file of globber.globGenerator()) {
+              fs.readFile(file, 'utf8', (err, data) => {
+                if (err) {
+                  console.error(err);
+                  return;
+                }
+                await github.rest.repos.uploadReleaseAsset({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  release_id: release.id,
+                  name: file,
+                  data: data
+                });
+              });
+            }
+          }else{
+          
+            const directoryPath = path.join(__dirname, '_tmpuragha/out');
+            fs.readdir(directoryPath, function (err, files) {
+                if (err) {
+                    return console.log('Unable to scan directory: ' + err);
+                } 
+                //listing all files using forEach
+                files.forEach(function (file) {
+                    fs.readFile(file, 'utf8', (err, data) => {
+                    if (err) {
+                      console.error(err);
+                      return;
+                    }
+                    await github.rest.repos.uploadReleaseAsset({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      release_id: release.id,
+                      name: file,
+                      data: data
+                    });
+                  });
+
+                });
+            });          
+          }
