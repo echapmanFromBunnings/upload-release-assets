@@ -22,6 +22,10 @@ inputs:
     description: 'The artefact to download if this is being done within another workflow'
     required: false
     default: ''
+  overrideExistingArtefact:
+    description: 'Override artefact if it already exists. Token will need access to do so'
+    required: false
+    default: false
 
 runs:
   using: "composite"
@@ -45,6 +49,7 @@ runs:
       env:
         FILES: ${{ inputs.files }}
         ARTEFACT_NAME_INPUT: "${{ inputs.artefactName }}"
+        OVERRIDE_ARTEFACTS: "${{ inputs.overrideExistingArtefact }}"
       with:
         github-token: ${{ inputs.githubToken }}
         debug: true
@@ -80,12 +85,23 @@ runs:
                     console.error(err);
                     return;
                 }
+                
+                const fileName = file.split("/").pop();
+                const assest = release.assets.filter(asset=>asset.name == fileName);
+                if(assest.length > 0 && process.env.OVERRIDE_ARTEFACTS == "true"){
+                  github.rest.repos.deleteReleaseAsset({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      asset_id: assest.id
+                  });                  
+                }
+                
                 console.log('write to '+ release.id)
                 github.rest.repos.uploadReleaseAsset({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     release_id: release.id,
-                    name: file.split("/").pop(),
+                    name: fileName,
                     data: data
                 });
               });
@@ -116,12 +132,23 @@ runs:
                         console.error(err);
                         return;
                       }
+                      
+                      const fileName = file.split("/").pop();
+                      const assest = release.assets.filter(asset=>asset.name == fileName);
+                      if(assest.length > 0 && process.env.OVERRIDE_ARTEFACTS == "true"){
+                        github.rest.repos.deleteReleaseAsset({
+                            owner: context.repo.owner,
+                            repo: context.repo.repo,
+                            asset_id: assest.id
+                        });                  
+                      }
+                      
                       console.log('write to '+ release.id)
                       github.rest.repos.uploadReleaseAsset({
                         owner: context.repo.owner,
                         repo: context.repo.repo,
                         release_id: release.id,
-                        name: file.split("/").pop(),
+                        name: fileName,
                         data: data
                       });
                   });              
@@ -143,11 +170,22 @@ runs:
                         console.error(err);
                         return;
                       }
+                      
+                      const fileName = file.split("/").pop();
+                      const assest = release.assets.filter(asset=>asset.name == fileName);
+                      if(assest.length > 0 && process.env.OVERRIDE_ARTEFACTS == "true"){
+                        github.rest.repos.deleteReleaseAsset({
+                            owner: context.repo.owner,
+                            repo: context.repo.repo,
+                            asset_id: assest.id
+                        });                  
+                      }
+                      
                       github.rest.repos.uploadReleaseAsset({
                         owner: context.repo.owner,
                         repo: context.repo.repo,
                         release_id: release.id,
-                        name: file.split("/").pop(),
+                        name: fileName,
                         data: data
                       });
                   });

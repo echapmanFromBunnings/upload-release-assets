@@ -15,10 +15,23 @@ Action provides ability to update an existing release with more assets
 ```
 
 Alternatively you can provide an artefact name and it will upload accordingly
+
 ```
 - uses: echapmanFromBunnings/upload-release-assets@1.2
   with:
     releaseTag: '1.1.1'
     githubToken: ${{ secrets.GITHUB_TOKEN }}
     artefactName: my-artefacts-for-upload
+```
+
+There is also an override option available, for if the asset already exists.
+This is off by default
+
+```
+- uses: echapmanFromBunnings/upload-release-assets@1.2
+  with:
+    releaseTag: '1.1.1'
+    githubToken: ${{ secrets.GITHUB_TOKEN }}
+    artefactName: my-artefacts-for-upload
+    overrideExistingArtefact: true
 ```
